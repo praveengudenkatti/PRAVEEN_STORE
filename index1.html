@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mixy Store | Premium Apps & MODs</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        :root {
+            --primary: #6a11cb;
+            --secondary: #2575fc;
+            --accent: #ff2d75;
+            --dark: #0f0c29;
+            --light: #f8f9fa;
+            --glass: rgba(255, 255, 255, 0.1);
+            --shadow: rgba(0, 0, 0, 0.2);
+            --glow: rgba(106, 17, 203, 0.5);
+        }
+
+        body {
+            background: linear-gradient(45deg, #0f0c29, #302b63, #24243e);
+            color: var(--light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #0f0c29);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            z-index: 1000;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .welcome-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-100%);
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 2rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .logo {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #6a11cb, #2575fc, #ff2d75);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px var(--glow);
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            font-size: 1.5rem;
+            opacity: 0.9;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.4;
+            background: linear-gradient(to right, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .get-started-btn {
+            margin-top: 3rem;
+            padding: 1rem 3rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            transition: all 0.4s ease;
+            box-shadow: 0 0 20px var(--glow);
+        }
+
+        .get-started-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px var(--glow);
+            background: linear-gradient(45deg, var(--secondary), var(--accent));
+        }
+
+        .get-started-btn:active {
+            transform: translateY(0);
+        }
+
+        .get-started-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.7s ease;
+            z-index: -1;
+        }
+
+        .get-started-btn:hover::before {
+            left: 100%;
+        }
+
+        /* Main Store Page */
+        .main-container {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+
+        .main-container.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 12, 41, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .store-title {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .search-container {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 0.8rem 1rem 0.8rem 3rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px var(--glow);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .apps-grid {
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .app-card {
+            background: var(--glass);
+            border-radius: 20px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(106, 17, 203, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .app-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .app-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            object-fit: cover;
+            margin-right: 1rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .app-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .app-description {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .download-btn {
+            width: 100%;
+            padding: 0.8rem;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: linear-gradient(to right, var(--secondary), var(--accent));
+            box-shadow: 0 5px 15px var(--glow);
+            transform: translateY(-2px);
+        }
+
+        /* App Detail Page */
+        .detail-container {
+            display: none;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .detail-container.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-bottom: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .back-btn i {
+            margin-right: 0.5rem;
+        }
+
+        .app-detail-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: var(--glass);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-app-icon {
+            width: 120px;
+            height: 120px;
+            border-radius: 25px;
+            object-fit: cover;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .detail-app-name {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .detail-app-description {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+            max-width: 800px;
+        }
+
+        .detail-download-btn {
+            padding: 1.2rem 3rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            margin: 2rem 0 3rem;
+            transition: all 0.4s ease;
+            box-shadow: 0 0 25px var(--glow);
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .detail-download-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 40px var(--glow);
+        }
+
+        .suggested-apps {
+            margin-top: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .suggested-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .suggested-card {
+            background: var(--glass);
+            border-radius: 15px;
+            padding: 1.2rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .suggested-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(106, 17, 203, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .suggested-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .suggested-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            object-fit: cover;
+            margin-right: 1rem;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 300px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .no-apps {
+            text-align: center;
+            padding: 4rem;
+            font-size: 1.2rem;
+            opacity: 0.7;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .logo { font-size: 2.8rem; }
+            .tagline { font-size: 1.2rem; padding: 0 1rem; }
+            .header { flex-direction: column; padding: 1rem; }
+            .store-title { margin-bottom: 1rem; }
+            .search-container { width: 100%; }
+            .apps-grid { grid-template-columns: 1fr; padding: 1rem; }
+            .app-detail-header { padding: 1.5rem; }
+            .detail-app-name { font-size: 2rem; }
+            .detail-app-description { font-size: 1rem; }
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <!-- Welcome Screen -->
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="logo-container">
+            <div class="logo">Mixy Store</div>
+            <div class="tagline">All MODs & Premium APKs Free To Download</div>
+        </div>
+        <button class="get-started-btn" id="getStartedBtn">
+            <i class="fas fa-rocket"></i> Get Started
+        </button>
+    </div>
+
+    <!-- Main Store Page -->
+    <div class="main-container" id="mainContainer">
+        <header class="header">
+            <div class="store-title">Mixy Store</div>
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-box" id="searchBox" placeholder="Search for apps...">
+            </div>
+        </header>
+
+        <div class="apps-grid" id="appsGrid">
+            <!-- Apps will be loaded here dynamically -->
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <p>Loading amazing apps...</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Mixy Store &copy; 2023 | All Premium Apps & MODs</p>
+            <p>Disclaimer: All apps are for educational purposes only.</p>
+        </div>
+    </div>
+
+    <!-- App Detail Page -->
+    <div class="detail-container" id="detailContainer">
+        <button class="back-btn" id="backBtn">
+            <i class="fas fa-arrow-left"></i> Back to Store
+        </button>
+
+        <div class="app-detail-header">
+            <img class="detail-app-icon" id="detailAppIcon" src="" alt="App Icon">
+            <h1 class="detail-app-name" id="detailAppName"></h1>
+            <p class="detail-app-description" id="detailAppDescription"></p>
+        </div>
+
+        <button class="detail-download-btn" id="detailDownloadBtn">
+            <i class="fas fa-download"></i> Download Now
+        </button>
+
+        <div class="suggested-apps">
+            <h2 class="section-title">More Apps You Might Like</h2>
+            <div class="suggested-grid" id="suggestedGrid">
+                <!-- Suggested apps will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+  apiKey: "AIzaSyABxUEoJVfCGIEWhkiFKB930W4YjO6ruBw",
+  authDomain: "edit-5e200.firebaseapp.com",
+  databaseURL: "https://edit-5e200-default-rtdb.firebaseio.com",
+  projectId: "edit-5e200",
+  storageBucket: "edit-5e200.firebasestorage.app",
+  messagingSenderId: "892315234840",
+  appId: "1:892315234840:web:e8e5a8d662614af0c5896d",
+  measurementId: "G-980DGT5KKQ"
+};
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // DOM Elements
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const getStartedBtn = document.getElementById('getStartedBtn');
+        const mainContainer = document.getElementById('mainContainer');
+        const appsGrid = document.getElementById('appsGrid');
+        const searchBox = document.getElementById('searchBox');
+        const detailContainer = document.getElementById('detailContainer');
+        const backBtn = document.getElementById('backBtn');
+        const detailAppIcon = document.getElementById('detailAppIcon');
+        const detailAppName = document.getElementById('detailAppName');
+        const detailAppDescription = document.getElementById('detailAppDescription');
+        const detailDownloadBtn = document.getElementById('detailDownloadBtn');
+        const suggestedGrid = document.getElementById('suggestedGrid');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        // State
+        let allApps = [];
+        let currentAppId = null;
+
+        // Initialize the app
+        function init() {
+            // Get Started button click
+            getStartedBtn.addEventListener('click', () => {
+                welcomeScreen.classList.add('hidden');
+                setTimeout(() => {
+                    mainContainer.classList.add('active');
+                    loadAppsFromFirebase();
+                }, 800);
+            });
+
+            // Back button click
+            backBtn.addEventListener('click', () => {
+                detailContainer.classList.remove('active');
+                mainContainer.classList.add('active');
+            });
+
+            // Search functionality
+            searchBox.addEventListener('input', (e) => {
+                filterApps(e.target.value);
+            });
+
+            // Load apps from Firebase
+            loadAppsFromFirebase();
+        }
+
+        // Load apps from Firebase Realtime Database
+        function loadAppsFromFirebase() {
+            const appsRef = database.ref('apps');
+            
+            appsRef.on('value', (snapshot) => {
+                allApps = [];
+                appsGrid.innerHTML = '';
+                
+                if (snapshot.exists()) {
+                    const appsData = snapshot.val();
+                    
+                    // Convert to array
+                    Object.keys(appsData).forEach(key => {
+                        allApps.push({
+                            id: key,
+                            ...appsData[key]
+                        });
+                    });
+                    
+                    // Display apps
+                    renderApps(allApps);
+                } else {
+                    appsGrid.innerHTML = `
+                        <div class="no-apps">
+                            <h3>No Apps Available Yet</h3>
+                            <p>Check back soon for amazing apps and MODs!</p>
+                        </div>
+                    `;
+                }
+            }, (error) => {
+                console.error("Error loading apps:", error);
+                appsGrid.innerHTML = `
+                    <div class="no-apps">
+                        <h3>Error Loading Apps</h3>
+                        <p>Please check your connection and try again.</p>
+                    </div>
+                `;
+            });
+        }
+
+        // Render apps to the grid
+        function renderApps(apps) {
+            appsGrid.innerHTML = '';
+            
+            if (apps.length === 0) {
+                appsGrid.innerHTML = `
+                    <div class="no-apps">
+                        <h3>No Apps Found</h3>
+                        <p>Try a different search term.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            apps.forEach(app => {
+                const appCard = document.createElement('div');
+                appCard.className = 'app-card';
+                appCard.innerHTML = `
+                    <div class="app-header">
+                        <img src="${app.iconUrl || 'https://via.placeholder.com/60/6a11cb/ffffff?text=App'}" 
+                             alt="${app.name}" class="app-icon">
+                        <div>
+                            <h3 class="app-name">${app.name}</h3>
+                            <p class="app-description">${app.description || 'Premium MOD APK with all features unlocked'}</p>
+                        </div>
+                    </div>
+                    <button class="download-btn" data-app-id="${app.id}">
+                        <i class="fas fa-download"></i> Download Now
+                    </button>
+                `;
+                
+                // Add click event to the card
+                appCard.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('download-btn')) {
+                        openAppDetail(app.id);
+                    }
+                });
+                
+                // Add click event to download button
+                const downloadBtn = appCard.querySelector('.download-btn');
+                downloadBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openAppDetail(app.id);
+                });
+                
+                appsGrid.appendChild(appCard);
+            });
+        }
+
+        // Filter apps based on search query
+        function filterApps(query) {
+            if (!query.trim()) {
+                renderApps(allApps);
+                return;
+            }
+            
+            const filteredApps = allApps.filter(app => 
+                app.name.toLowerCase().includes(query.toLowerCase()) ||
+                (app.description && app.description.toLowerCase().includes(query.toLowerCase()))
+            );
+            
+            renderApps(filteredApps);
+        }
+
+        // Open app detail page
+        function openAppDetail(appId) {
+            const app = allApps.find(a => a.id === appId);
+            if (!app) return;
+            
+            currentAppId = appId;
+            
+            // Set app details
+            detailAppIcon.src = app.iconUrl || 'https://via.placeholder.com/120/6a11cb/ffffff?text=App';
+            detailAppName.textContent = app.name;
+            detailAppDescription.textContent = app.description || 'Premium MOD APK with all features unlocked.';
+            
+            // Set download button
+            detailDownloadBtn.onclick = () => {
+                if (app.downloadUrl) {
+                    window.open(app.downloadUrl, '_blank');
+                } else {
+                    alert('Download link not available yet.');
+                }
+            };
+            
+            // Load suggested apps (exclude current app)
+            const suggestedApps = allApps
+                .filter(a => a.id !== appId)
+                .slice(0, 2); // Show only 2 suggested apps
+            
+            renderSuggestedApps(suggestedApps);
+            
+            // Switch to detail view
+            mainContainer.classList.remove('active');
+            detailContainer.classList.add('active');
+        }
+
+        // Render suggested apps
+        function renderSuggestedApps(apps) {
+            suggestedGrid.innerHTML = '';
+            
+            if (apps.length === 0) {
+                suggestedGrid.innerHTML = '<p>No other apps available.</p>';
+                return;
+            }
+            
+            apps.forEach(app => {
+                const suggestedCard = document.createElement('div');
+                suggestedCard.className = 'suggested-card';
+                suggestedCard.innerHTML = `
+                    <div class="suggested-header">
+                        <img src="${app.iconUrl || 'https://via.placeholder.com/50/6a11cb/ffffff?text=App'}" 
+                             alt="${app.name}" class="suggested-icon">
+                        <div>
+                            <h4>${app.name}</h4>
+                            <p style="font-size: 0.8rem; opacity: 0.8;">${app.description ? app.description.substring(0, 50) + '...' : 'Premium MOD APK'}</p>
+                        </div>
+                    </div>
+                    <button class="download-btn" style="font-size: 0.9rem; padding: 0.6rem;" data-app-id="${app.id}">
+                        <i class="fas fa-external-link-alt"></i> View Details
+                    </button>
+                `;
+                
+                // Add click event to the card
+                suggestedCard.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('download-btn')) {
+                        openAppDetail(app.id);
+                    }
+                });
+                
+                // Add click event to view details button
+                const viewBtn = suggestedCard.querySelector('.download-btn');
+                viewBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openAppDetail(app.id);
+                });
+                
+                suggestedGrid.appendChild(suggestedCard);
+            });
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
